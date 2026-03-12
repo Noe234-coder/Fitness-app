@@ -2,8 +2,12 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, SafeAreaView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
-
+import { useColorScheme } from 'nativewind';
+  
 export default function AthleteDashboard() {
+
+  const {colorScheme, toggleColorScheme} = useColorScheme();
+
   const days = [
     { day: 'Mon', date: '12', active: false },
     { day: 'Tue', date: '13', active: false },
@@ -18,29 +22,48 @@ export default function AthleteDashboard() {
     <SafeAreaView className="flex-1 bg-background-light dark:bg-background-dark">
       <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         
-        {/* Header & Progress */}
+      {/* Header & Progress */}
         <View className="flex-row items-center justify-between mb-6">
           <View>
             <Text className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Today's Session</Text>
             <Text className="text-slate-500 dark:text-slate-400 text-sm mt-1">Push Day • Phase 2</Text>
           </View>
-          <View className="relative items-center justify-center w-12 h-12">
-            <Svg width="48" height="48" viewBox="0 0 48 48" style={{ transform: [{ rotate: '-90deg' }] }}>
-              <Circle
-                cx="24" cy="24" r="20"
-                strokeWidth="4" fill="transparent"
-                className="stroke-slate-200 dark:stroke-slate-800"
+          
+          {/* Contenedor derecho: Botón modo oscuro + Progreso SVG */}
+          <View className="flex-row items-center gap-4">
+            
+            {/* BOTÓN DE MODO OSCURO */}
+            <TouchableOpacity 
+              onPress={toggleColorScheme}
+              className="p-2 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700"
+            >
+              <MaterialIcons 
+                name={colorScheme === 'dark' ? 'light-mode' : 'dark-mode'} 
+                size={22} 
+                color={colorScheme === 'dark' ? '#fbbf24' : '#64748b'} 
               />
-              <Circle
-                cx="24" cy="24" r="20"
-                strokeWidth="4" fill="transparent"
-                strokeDasharray="125.6" strokeDashoffset="44"
-                className="stroke-primary"
-              />
-            </Svg>
-            <View className="absolute inset-0 items-center justify-center">
-              <Text className="text-[10px] font-bold text-slate-900 dark:text-white">65%</Text>
+            </TouchableOpacity>
+
+            {/* CÍRCULO DE PROGRESO */}
+            <View className="relative items-center justify-center w-12 h-12">
+              <Svg width="48" height="48" viewBox="0 0 48 48" style={{ transform: [{ rotate: '-90deg' }] }}>
+                <Circle
+                  cx="24" cy="24" r="20"
+                  strokeWidth="4" fill="transparent"
+                  className="stroke-slate-200 dark:stroke-slate-800"
+                />
+                <Circle
+                  cx="24" cy="24" r="20"
+                  strokeWidth="4" fill="transparent"
+                  strokeDasharray="125.6" strokeDashoffset="44"
+                  className="stroke-primary"
+                />
+              </Svg>
+              <View className="absolute inset-0 items-center justify-center">
+                <Text className="text-[10px] font-bold text-slate-900 dark:text-white">65%</Text>
+              </View>
             </View>
+
           </View>
         </View>
 

@@ -1,3 +1,4 @@
+import './global.css'; // Añade esta línea al inicio de tu archivo App.js
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
@@ -8,6 +9,8 @@ import { supabase } from './src/services/supabase';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import CoachNavigator from './src/navigation/CoachNavigator';
 import AthleteNavigator from './src/navigation/AthleteNavigator';
+
+// ... (resto de tu código App.js)
 
 export default function App() {
   const { session, setSession, userRole } = useAuthStore();

@@ -1,53 +1,39 @@
-import './global.css';
-import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useAuthStore } from './src/store/useAuthStore';
+import { supabase } from './src/services/supabase';
 
-
-
-
-
-
+// Importamos pantallas y navegadores
+import LoginScreen from './src/screens/auth/LoginScreen';
 import CoachNavigator from './src/navigation/CoachNavigator';
 import AthleteNavigator from './src/navigation/AthleteNavigator';
-// 1. Pantalla de Login
-function LoginScreen() {
-  const setUserRole = useAuthStore((state) => state.setUserRole);
 
-  return (
-    <SafeAreaView className="flex-1 bg-background-dark items-center justify-center p-6">
-      <Text className="text-4xl font-display font-bold text-white mb-10">JGG TEAM</Text>
-      
-      <TouchableOpacity 
-        className="w-full bg-primary py-4 rounded-xl items-center mb-4 active:opacity-80"
-        onPress={() => setUserRole('coach')}
-      >
-        <Text className="text-white font-bold text-lg">Entrar como Entrenador</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity 
-        className="w-full bg-slate-800 py-4 rounded-xl items-center active:opacity-80"
-        onPress={() => setUserRole('athlete')}
-      >
-        <Text className="text-white font-bold text-lg">Entrar como Atleta</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
-  );
-}
-
-
-// COMPONENTE PRINCIPAL
 export default function App() {
-  const userRole = useAuthStore((state) => state.userRole);
+  const { session, setSession, userRole } = useAuthStore();
+
+  // Escuchamos la sesión en tiempo real de Supabase
+  useEffect(() => {
+    // 1. Mirar si ya había una sesión guardada al abrir la app
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // 2. Quedarse escuchando por si el usuario entra o sale
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    // Limpieza al cerrar
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <NavigationContainer>
       <StatusBar style={userRole === 'coach' ? "dark" : "light"} />
       
-      {/* Sistema de Rutas Antibombas */}
-      {!userRole ? (
+      {/* Lógica de navegación principal */}
+      {(!session && !userRole) ? (
         <LoginScreen />
       ) : userRole === 'coach' ? (
         <CoachNavigator />

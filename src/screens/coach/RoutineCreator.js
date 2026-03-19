@@ -8,10 +8,11 @@ export default function RoutineCreator() {
   const { session } = useAuthStore();
   
   const [routineName, setRoutineName] = useState('');
-  const [exercises, setExercises] = useState([{ name: '', sets: '', reps: '' }]);
+  // 1. AÑADIDO: 'rir' y 'notes' al estado inicial
+  const [exercises, setExercises] = useState([{ name: '', sets: '', reps: '', rir: '', notes: '' }]);
 
   const addExercise = () => {
-    setExercises([...exercises, { name: '', sets: '', reps: '' }]);
+    setExercises([...exercises, { name: '', sets: '', reps: '', rir: '', notes: '' }]);
   };
 
   const updateExercise = (index, field, value) => {
@@ -31,73 +32,96 @@ export default function RoutineCreator() {
     }
 
     try {
-      // 1. CREAR EL MESOCICLO (Requisito de tu nueva estructura)
+      // 1. CREAR EL MESOCICLO
       const { data: mesoData, error: mesoError } = await supabase
         .from('mesocycles')
         .insert([{ 
-          athlete_id: session?.user?.id,
-          name: `Mesociclo base para: ${routineName}`,
+          athlete_id: session?.user?.id, // ID temporal para pruebas
+          name: `Mesociclo: ${routineName}`,
+          is_active: true
         }])
         .select()
         .single();
 
       if (mesoError) throw mesoError;
 
-      // 2. CREAR LA RUTINA (Vinculada al mesociclo anterior)
-      const { data: routineData, error: routineError } = await supabase
+      // 2. CREAR EL WORKOUT (Rutina)
+      const { data: workoutData, error: workoutError } = await supabase
         .from('workouts')
         .insert([{ 
           mesocycle_id: mesoData.id,
-          id: routineName,
-          day_name: 'Lunes', // Por defecto Lunes. Podrás añadir un selector luego.
-          focus: routineName // Usamos el nombre como focus area temporalmente
+          day_name: 'Día 1',
+          focus: routineName,
+          order: 1 // Tu nuevo campo funcionando perfectamente
         }])
         .select()
         .single();
 
-      if (routineError) throw routineError;
+      if (workoutError) throw workoutError;
 
-      // 3. CREAR EJERCICIOS Y SERIES
+      // 3. CREAR EJERCICIOS, PLANTILLA DE SERIES Y LOGS DE 4 SEMANAS
       for (let i = 0; i < exercises.length; i++) {
         const ex = exercises[i];
         
-        // Insertar el ejercicio
+        // A. Insertar el ejercicio
         const { data: exerciseData, error: exerciseError } = await supabase
-          .from('exercices')
+          .from('exercises')
           .insert([{
-            routine_id: routineData.id,
+            workout_id: workoutData.id,
             name: ex.name,
-            order_index: i + 1 // Para saber el orden (1, 2, 3...)
+            order: i + 1,
+            coach_notes: ex.notes || null // <--- 2. AÑADIDO: Guardamos las notas técnicas (si las hay)
           }])
           .select()
           .single();
 
         if (exerciseError) throw exerciseError;
 
-        // Insertar las series
+        // B. Insertar las series "Plantilla" (exercise_sets)
         const numSets = parseInt(ex.sets) || 1;
         const setsToInsert = [];
 
         for (let setNum = 1; setNum <= numSets; setNum++) {
           setsToInsert.push({
             exercise_id: exerciseData.id,
-            set_number: setNum,
-            target_reps: ex.reps // Guarda el rango tipo "10-12"
-            // target_rir y rest_time se quedarán null por ahora hasta que añadas esos campos en el formulario
+            set_order: setNum,
+            target_reps: ex.reps, 
+            target_rir: ex.rir || null // <--- 3. AÑADIDO: Guardamos el RIR objetivo
           });
         }
 
-        const { error: setsError } = await supabase
+        const { data: insertedSets, error: setsError } = await supabase
           .from('exercise_sets')
-          .insert(setsToInsert);
+          .insert(setsToInsert)
+          .select();
 
         if (setsError) throw setsError;
+
+        // C. Generar las filas vacías para las 4 semanas en 'workout_logs'
+        const logsToInsert = [];
+        
+        for (const set of insertedSets) {
+          for (let week = 1; week <= 4; week++) {
+            logsToInsert.push({
+              set_id: set.id,
+              week_number: week,
+              actual_weight: null,
+              actual_reps: null
+            });
+          }
+        }
+
+        const { error: logsError } = await supabase
+          .from('workout_logs')
+          .insert(logsToInsert);
+
+        if (logsError) throw logsError;
       }
 
-      Alert.alert("¡De locos!", "La rutina, ejercicios y series se han guardado perfectamente.");
+      Alert.alert("¡Brutal!", "Rutina creada con RIR, notas y sus 4 semanas generadas.");
       
       setRoutineName('');
-      setExercises([{ name: '', sets: '', reps: '' }]);
+      setExercises([{ name: '', sets: '', reps: '', rir: '', notes: '' }]);
 
     } catch (error) {
       console.error("Error al guardar:", error.message);
@@ -112,19 +136,17 @@ export default function RoutineCreator() {
       </View>
 
       <ScrollView className="flex-1 p-4">
-        {/* Nombre de la Rutina */}
         <View className="mb-6">
-          <Text className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Nombre de la Rutina / Foco</Text>
+          <Text className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Enfoque de la Rutina</Text>
           <TextInput
             className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-            placeholder="Ej: Push Day / Pecho y Tríceps"
+            placeholder="Ej: Push / Fuerza Pectoral"
             placeholderTextColor="#94a3b8"
             value={routineName}
             onChangeText={setRoutineName}
           />
         </View>
 
-        {/* Lista de Ejercicios */}
         <View className="mb-4">
           <Text className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Ejercicios</Text>
           
@@ -135,18 +157,28 @@ export default function RoutineCreator() {
               </View>
               
               <TextInput
-                className="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg mb-3 border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white"
+                className="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg mb-2 border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white"
                 placeholder="Nombre del ejercicio"
                 placeholderTextColor="#94a3b8"
                 value={exercise.name}
                 onChangeText={(text) => updateExercise(index, 'name', text)}
               />
+
+              {/* AÑADIDO: Input para notas técnicas */}
+              <TextInput
+                className="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg mb-3 border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white text-sm"
+                placeholder="Notas del Coach (opcional)"
+                placeholderTextColor="#94a3b8"
+                multiline
+                value={exercise.notes}
+                onChangeText={(text) => updateExercise(index, 'notes', text)}
+              />
               
-              <View className="flex-row gap-3">
+              <View className="flex-row gap-2">
                 <View className="flex-1">
                   <TextInput
-                    className="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white"
-                    placeholder="Series (ej: 4)"
+                    className="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white text-center"
+                    placeholder="Series"
                     placeholderTextColor="#94a3b8"
                     keyboardType="numeric"
                     value={exercise.sets}
@@ -155,11 +187,21 @@ export default function RoutineCreator() {
                 </View>
                 <View className="flex-1">
                   <TextInput
-                    className="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white"
+                    className="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white text-center"
                     placeholder="Reps (ej: 10-12)"
                     placeholderTextColor="#94a3b8"
                     value={exercise.reps}
                     onChangeText={(text) => updateExercise(index, 'reps', text)}
+                  />
+                </View>
+                {/* AÑADIDO: Input para RIR */}
+                <View className="flex-1">
+                  <TextInput
+                    className="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white text-center"
+                    placeholder="RIR (ej: 1-2)"
+                    placeholderTextColor="#94a3b8"
+                    value={exercise.rir}
+                    onChangeText={(text) => updateExercise(index, 'rir', text)}
                   />
                 </View>
               </View>

@@ -1,221 +1,136 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { supabase } from '../../services/supabase';
+import { useAuthStore } from '../../store/useAuthStore';
 
 export default function MacrosDietPlan() {
-  const [expandedMeal, setExpandedMeal] = useState(1); // 1 is expanded default
+  const { session } = useAuthStore();
+  const [diet, setDiet] = useState(null);
+  const [meals, setMeals] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  return (
-    <SafeAreaView className="flex-1 bg-background-light dark:bg-background-dark pb-24">
-      {/* Header Section */}
-      <View className="bg-background-light/80 dark:bg-background-dark/80 p-4 border-b border-slate-200 dark:border-slate-800 z-10 w-full">
+  // useEffect se ejecuta automáticamente nada más abrir la pantalla
+  useEffect(() => {
+    fetchDietData();
+  }, []);
+
+  const fetchDietData = async () => {
+    try {
+      setLoading(true);
+      
+      // 1. Buscamos la dieta asignada a este atleta
+      const { data: dietData, error: dietError } = await supabase
+        .from('diets')
+        .select('*')
+        .eq('athlete_id', session?.user?.id)
+        .single(); // Pedimos un único resultado (la dieta actual)
+
+      if (dietError) {
+        // Si el error es PGRST116 significa que simplemente no encontró resultados (no hay dieta asignada aún)
+        if (dietError.code !== 'PGRST116') throw dietError;
+      }
+
+      if (dietData) {
+        setDiet(dietData);
         
-        <View className="flex-row items-center justify-between mb-6">
-          <View className="flex-row items-center gap-3">
-            <MaterialIcons name="arrow-back" size={24} color="#007fff" />
-            <Text className="text-xl font-bold text-slate-900 dark:text-slate-100">Daily Nutrition</Text>
-          </View>
-          <View className="flex-row items-center gap-2 bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-            <MaterialIcons name="calendar-today" size={14} color="#007fff" />
-            <Text className="text-sm font-semibold text-primary">Today</Text>
-          </View>
-        </View>
+        // 2. Si hay dieta, buscamos sus comidas (meals) ordenadas por el número de comida
+        const { data: mealsData, error: mealsError } = await supabase
+          .from('meals')
+          .select('*')
+          .eq('diet_id', dietData.id)
+          .order('meal_order', { ascending: true });
 
-        {/* Macro Summary */}
-        <View className="flex-col gap-4">
-          <View className="flex-row items-center justify-between px-2">
-            <View>
-              <Text className="text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold">Total Energy</Text>
-              <Text className="text-3xl font-black text-primary">
-                3,250 <Text className="text-sm font-normal text-slate-400">kcal</Text>
-              </Text>
-            </View>
-            <View className="w-12 h-12 rounded-full border-4 border-primary items-center justify-center">
-              <Text className="text-[10px] font-bold text-slate-900 dark:text-slate-100">82%</Text>
-            </View>
-          </View>
+        if (mealsError) throw mealsError;
+        setMeals(mealsData || []);
+      }
+    } catch (error) {
+      console.error("Error al cargar la dieta:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-          <View className="flex-row gap-3">
-            {/* Protein */}
-            <View className="flex-1 bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-              <View className="flex-row justify-between items-end mb-2">
-                <Text className="text-xs font-bold text-slate-400">P</Text>
-                <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">158g</Text>
-              </View>
-              <View className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden flex-row">
-                <View className="bg-primary h-full rounded-full" style={{ width: '75%' }} />
-              </View>
-            </View>
+  // Pantalla de carga mientras trae los datos de Supabase
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 justify-center items-center bg-background-light dark:bg-background-dark">
+        <ActivityIndicator size="large" color="#007fff" />
+        <Text className="mt-4 text-slate-500 font-semibold">Cargando tu plan nutricional...</Text>
+      </SafeAreaView>
+    );
+  }
 
-            {/* Carbs */}
-            <View className="flex-1 bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-              <View className="flex-row justify-between items-end mb-2">
-                <Text className="text-xs font-bold text-slate-400">C</Text>
-                <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">590g</Text>
-              </View>
-              <View className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden flex-row">
-                <View className="bg-emerald-500 h-full rounded-full" style={{ width: '90%' }} />
-              </View>
-            </View>
+  // Si termina de cargar y no encuentra dieta, mostramos este estado vacío
+  if (!diet) {
+    return (
+      <SafeAreaView className="flex-1 justify-center items-center bg-background-light dark:bg-background-dark p-6">
+        <MaterialIcons name="restaurant-menu" size={64} color="#cbd5e1" />
+        <Text className="text-xl font-bold text-slate-800 dark:text-white mt-4 text-center">Sin plan activo</Text>
+        <Text className="text-slate-500 text-center mt-2">Tu entrenador aún no te ha asignado un plan nutricional. ¡Mucha paciencia!</Text>
+      </SafeAreaView>
+    );
+  }
 
-            {/* Fats */}
-            <View className="flex-1 bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-              <View className="flex-row justify-between items-end mb-2">
-                <Text className="text-xs font-bold text-slate-400">F</Text>
-                <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">73g</Text>
-              </View>
-              <View className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden flex-row">
-                <View className="bg-yellow-500 h-full rounded-full" style={{ width: '60%' }} />
-              </View>
-            </View>
-          </View>
-        </View>
-
+  // Si encuentra la dieta, pintamos la interfaz premium
+  return (
+    <SafeAreaView className="flex-1 bg-background-light dark:bg-background-dark">
+      <View className="p-4 border-b border-slate-200 dark:border-slate-800">
+        <Text className="text-xl font-bold text-slate-900 dark:text-white">Tu Dieta: {diet.phase}</Text>
       </View>
 
-      {/* Meal List */}
-      <ScrollView className="flex-1 w-full p-4" showsVerticalScrollIndicator={false}>
-        <View className="space-y-4 flex-col gap-4">
+      <ScrollView className="flex-1 p-4">
+        {/* CABECERA: Totales del día */}
+        <View className="bg-white dark:bg-slate-800 p-5 rounded-3xl mb-6 shadow-sm border border-slate-100 dark:border-slate-700">
+          <Text className="text-center text-slate-400 dark:text-slate-400 font-bold mb-4 tracking-wider text-xs">OBJETIVOS DIARIOS</Text>
           
-          {/* Meal 1: Detailed */}
-          <TouchableOpacity 
-            className="bg-white dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-primary/20 overflow-hidden shadow-sm flex-col"
-            onPress={() => setExpandedMeal(expandedMeal === 1 ? null : 1)}
-          >
-            <View className="p-4 flex-row items-center justify-between border-b border-slate-100 dark:border-slate-700/50">
-              <View className="flex-row items-center gap-3">
-                <View className="p-2 bg-primary/10 rounded-lg">
-                  <MaterialIcons name="breakfast-dining" size={24} color="#007fff" />
-                </View>
-                <View>
-                  <Text className="font-bold text-slate-900 dark:text-slate-100">Meal 1: Breakfast</Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">07:30 AM</Text>
-                </View>
-              </View>
-              <View className="flex-row items-center gap-3">
-                <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">743 kcal</Text>
-                <View className="w-6 h-6 border-2 border-primary rounded items-center justify-center bg-primary">
-                  <MaterialIcons name="check" size={16} color="white" />
-                </View>
-              </View>
-            </View>
-
-            {expandedMeal === 1 && (
-              <View className="p-4 bg-slate-50/50 dark:bg-slate-900/20 flex-col">
-                <View className="flex-row gap-2 mb-4 justify-between">
-                  <View className="flex-1 bg-background-light dark:bg-background-dark p-2 rounded-lg border border-slate-100 dark:border-slate-800 items-center">
-                    <Text className="text-[10px] text-slate-500 uppercase font-bold">Prot</Text>
-                    <Text className="font-bold text-primary mt-1">36g</Text>
-                  </View>
-                  <View className="flex-1 bg-background-light dark:bg-background-dark p-2 rounded-lg border border-slate-100 dark:border-slate-800 items-center">
-                    <Text className="text-[10px] text-slate-500 uppercase font-bold">Carb</Text>
-                    <Text className="font-bold text-emerald-500 mt-1">100g</Text>
-                  </View>
-                  <View className="flex-1 bg-background-light dark:bg-background-dark p-2 rounded-lg border border-slate-100 dark:border-slate-800 items-center">
-                    <Text className="text-[10px] text-slate-500 uppercase font-bold">Fat</Text>
-                    <Text className="font-bold text-yellow-500 mt-1">22g</Text>
-                  </View>
-                  <View className="flex-1 bg-background-light dark:bg-background-dark p-2 rounded-lg border border-slate-100 dark:border-slate-800 items-center">
-                    <Text className="text-[10px] text-slate-500 uppercase font-bold">Fiber</Text>
-                    <Text className="font-bold text-slate-400 mt-1">12g</Text>
-                  </View>
-                </View>
-
-                <View className="flex-col gap-2">
-                  <View className="flex-row justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
-                    <Text className="text-sm text-slate-600 dark:text-slate-300">Oatmeal with Blueberries</Text>
-                    <Text className="text-sm font-medium text-slate-600 dark:text-slate-300">80g</Text>
-                  </View>
-                  <View className="flex-row justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
-                    <Text className="text-sm text-slate-600 dark:text-slate-300">Whey Protein Isolate</Text>
-                    <Text className="text-sm font-medium text-slate-600 dark:text-slate-300">1 Scoop</Text>
-                  </View>
-                  <View className="flex-row justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
-                    <Text className="text-sm text-slate-600 dark:text-slate-300">Almond Butter</Text>
-                    <Text className="text-sm font-medium text-slate-600 dark:text-slate-300">15g</Text>
-                  </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-sm text-slate-600 dark:text-slate-300">Greek Yogurt (Non-fat)</Text>
-                    <Text className="text-sm font-medium text-slate-600 dark:text-slate-300">150g</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Meal 2 */}
-          <TouchableOpacity 
-            className="bg-white dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm flex-col"
-            onPress={() => setExpandedMeal(expandedMeal === 2 ? null : 2)}
-          >
-            <View className="p-4 flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3 opacity-60">
-                <View className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                  <MaterialIcons name="lunch-dining" size={24} color="#64748b" />
-                </View>
-                <View>
-                  <Text className="font-bold text-slate-900 dark:text-slate-100">Meal 2: Post-Workout</Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">11:00 AM • 650 kcal</Text>
-                </View>
-              </View>
-              <View className="w-6 h-6 border-2 border-slate-300 dark:border-slate-600 rounded pt-[0.4] items-center justify-center">
-                 {/* check icon intentionally omitted to show uncompleted state */}
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          {/* Meal 3 */}
-          <TouchableOpacity 
-            className="bg-white dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm flex-col"
-            onPress={() => setExpandedMeal(expandedMeal === 3 ? null : 3)}
-          >
-            <View className="p-4 flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3 opacity-60">
-                <View className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                  <MaterialIcons name="restaurant" size={24} color="#64748b" />
-                </View>
-                <View>
-                  <Text className="font-bold text-slate-900 dark:text-slate-100">Meal 3: Lunch</Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">02:30 PM • 820 kcal</Text>
-                </View>
-              </View>
-              <View className="w-6 h-6 border-2 border-slate-300 dark:border-slate-600 rounded"></View>
-            </View>
-          </TouchableOpacity>
-
-          {/* Meal 4 */}
-          <View className="bg-white dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm flex-col">
-            <View className="p-4 flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3 opacity-60">
-                <View className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                  <MaterialIcons name="fastfood" size={24} color="#64748b" />
-                </View>
-                <View>
-                  <Text className="font-bold text-slate-900 dark:text-slate-100">Meal 4: Snack</Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">05:00 PM • 320 kcal</Text>
-                </View>
-              </View>
-              <View className="w-6 h-6 border-2 border-slate-300 dark:border-slate-600 rounded"></View>
-            </View>
+          <View className="flex-row justify-center items-end mb-6">
+            <Text className="text-6xl font-black text-slate-900 dark:text-white">{diet.total_kcal}</Text>
+            <Text className="text-lg text-slate-400 font-bold mb-2 ml-1">kcal</Text>
           </View>
 
-          {/* Meal 5 */}
-          <View className="bg-white dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm flex-col mb-10">
-            <View className="p-4 flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3 opacity-60">
-                <View className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                  <MaterialIcons name="dinner-dining" size={24} color="#64748b" />
-                </View>
-                <View>
-                  <Text className="font-bold text-slate-900 dark:text-slate-100">Meal 5: Dinner</Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">08:00 PM • 717 kcal</Text>
-                </View>
-              </View>
-              <View className="w-6 h-6 border-2 border-slate-300 dark:border-slate-600 rounded"></View>
+          <View className="flex-row justify-between border-t border-slate-100 dark:border-slate-700 pt-5 px-2">
+            <View className="items-center">
+              <Text className="text-xs text-slate-400 font-bold mb-1 tracking-wider">PROTEÍNA</Text>
+              <Text className="text-xl font-black text-primary">{diet.total_proteins}g</Text>
+            </View>
+            <View className="items-center">
+              <Text className="text-xs text-slate-400 font-bold mb-1 tracking-wider">CARBOS</Text>
+              <Text className="text-xl font-black text-[#f59e0b]">{diet.total_carbs}g</Text>
+            </View>
+            <View className="items-center">
+              <Text className="text-xs text-slate-400 font-bold mb-1 tracking-wider">GRASAS</Text>
+              <Text className="text-xl font-black text-[#ef4444]">{diet.total_fats}g</Text>
             </View>
           </View>
-
         </View>
+
+        {/* LISTA: Desglose por Comidas */}
+        <Text className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-4 ml-1 tracking-wider">DESGLOSE POR COMIDAS</Text>
+        
+        {meals.map((meal) => (
+          <View key={meal.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-3 border border-slate-100 dark:border-slate-700 shadow-sm flex-row items-center">
+            {/* Círculo con el número */}
+            <View className="bg-primary/10 dark:bg-primary/20 h-12 w-12 rounded-full items-center justify-center mr-4">
+              <Text className="font-black text-primary text-lg">{meal.meal_order}</Text>
+            </View>
+            
+            <View className="flex-1">
+              <View className="flex-row justify-between items-center mb-1">
+                <Text className="font-bold text-slate-900 dark:text-white text-base">Comida {meal.meal_order}</Text>
+                <Text className="font-black text-slate-700 dark:text-slate-300">{meal.target_kcal} kcal</Text>
+              </View>
+              
+              <View className="flex-row gap-4 mt-1">
+                <Text className="text-xs text-slate-400 font-medium">P: <Text className="font-bold text-slate-700 dark:text-slate-200">{meal.target_protein}g</Text></Text>
+                <Text className="text-xs text-slate-400 font-medium">CH: <Text className="font-bold text-slate-700 dark:text-slate-200">{meal.target_carbs}g</Text></Text>
+                <Text className="text-xs text-slate-400 font-medium">G: <Text className="font-bold text-slate-700 dark:text-slate-200">{meal.target_fats}g</Text></Text>
+              </View>
+            </View>
+          </View>
+        ))}
+        
+        <View className="h-8" />
       </ScrollView>
     </SafeAreaView>
   );

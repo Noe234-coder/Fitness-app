@@ -1,15 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
-import { useAuthStore } from '../../store/useAuthStore';
 
 export default function RoutineCreator() {
-  const { session } = useAuthStore();
-  
+  // --- ESTADO PARA LOS ATLETAS ---
+  const [athletes, setAthletes] = useState([]);
+  const [selectedAthlete, setSelectedAthlete] = useState(null);
+
+  // Estados de la rutina
   const [routineName, setRoutineName] = useState('');
-  // 1. AÑADIDO: 'rir' y 'notes' al estado inicial
   const [exercises, setExercises] = useState([{ name: '', sets: '', reps: '', rir: '', notes: '' }]);
+
+  // Cargar los atletas al entrar
+  useEffect(() => {
+    fetchAthletes();
+  }, []);
+
+  const fetchAthletes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, avatar_url')
+        .eq('role', 'athlete');
+
+      if (error) throw error;
+      setAthletes(data || []);
+    } catch (error) {
+      console.error("Error al cargar atletas:", error.message);
+    }
+  };
 
   const addExercise = () => {
     setExercises([...exercises, { name: '', sets: '', reps: '', rir: '', notes: '' }]);
@@ -22,6 +42,11 @@ export default function RoutineCreator() {
   };
 
   const handleSaveRoutine = async () => {
+    // VALIDACIÓN: Comprobar que hay un atleta seleccionado
+    if (!selectedAthlete) {
+      Alert.alert("Falta información", "Por favor, selecciona a un atleta de la lista superior.");
+      return;
+    }
     if (!routineName.trim()) {
       Alert.alert("Falta información", "Por favor, ponle un nombre a la rutina.");
       return;
@@ -32,11 +57,11 @@ export default function RoutineCreator() {
     }
 
     try {
-      // 1. CREAR EL MESOCICLO
+      // 1. CREAR EL MESOCICLO (Asignado al atleta seleccionado)
       const { data: mesoData, error: mesoError } = await supabase
         .from('mesocycles')
         .insert([{ 
-          athlete_id: session?.user?.id, // ID temporal para pruebas
+          athlete_id: selectedAthlete.id, // <--- MAGIA APLICADA AQUÍ
           name: `Mesociclo: ${routineName}`,
           is_active: true
         }])
@@ -52,7 +77,7 @@ export default function RoutineCreator() {
           mesocycle_id: mesoData.id,
           day_name: 'Día 1',
           focus: routineName,
-          order: 1 // Tu nuevo campo funcionando perfectamente
+          order: 1
         }])
         .select()
         .single();
@@ -63,21 +88,19 @@ export default function RoutineCreator() {
       for (let i = 0; i < exercises.length; i++) {
         const ex = exercises[i];
         
-        // A. Insertar el ejercicio
         const { data: exerciseData, error: exerciseError } = await supabase
           .from('exercises')
           .insert([{
             workout_id: workoutData.id,
             name: ex.name,
             order: i + 1,
-            coach_notes: ex.notes || null // <--- 2. AÑADIDO: Guardamos las notas técnicas (si las hay)
+            coach_notes: ex.notes || null
           }])
           .select()
           .single();
 
         if (exerciseError) throw exerciseError;
 
-        // B. Insertar las series "Plantilla" (exercise_sets)
         const numSets = parseInt(ex.sets) || 1;
         const setsToInsert = [];
 
@@ -86,7 +109,7 @@ export default function RoutineCreator() {
             exercise_id: exerciseData.id,
             set_order: setNum,
             target_reps: ex.reps, 
-            target_rir: ex.rir || null // <--- 3. AÑADIDO: Guardamos el RIR objetivo
+            target_rir: ex.rir || null
           });
         }
 
@@ -97,7 +120,6 @@ export default function RoutineCreator() {
 
         if (setsError) throw setsError;
 
-        // C. Generar las filas vacías para las 4 semanas en 'workout_logs'
         const logsToInsert = [];
         
         for (const set of insertedSets) {
@@ -118,8 +140,10 @@ export default function RoutineCreator() {
         if (logsError) throw logsError;
       }
 
-      Alert.alert("¡Brutal!", "Rutina creada con RIR, notas y sus 4 semanas generadas.");
+      Alert.alert("¡Brutal!", `Rutina creada y asignada a ${selectedAthlete.full_name}.`);
       
+      // Limpiar formulario
+      setSelectedAthlete(null);
       setRoutineName('');
       setExercises([{ name: '', sets: '', reps: '', rir: '', notes: '' }]);
 
@@ -136,6 +160,50 @@ export default function RoutineCreator() {
       </View>
 
       <ScrollView className="flex-1 p-4">
+        
+        {/* --- SECCIÓN: SELECTOR DE ATLETAS --- */}
+        <View className="mb-6">
+          <Text className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">¿Para quién es esta rutina?</Text>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+            {athletes.map((athlete) => (
+              <TouchableOpacity
+                key={athlete.id}
+                onPress={() => setSelectedAthlete(athlete)}
+                className={`mr-3 p-3 rounded-2xl border flex-row items-center ${
+                  selectedAthlete?.id === athlete.id
+                    ? 'bg-primary/10 border-primary'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${
+                  selectedAthlete?.id === athlete.id ? 'bg-primary' : 'bg-slate-100 dark:bg-slate-700'
+                }`}>
+                  <Text className={`font-black text-lg ${
+                    selectedAthlete?.id === athlete.id ? 'text-white' : 'text-slate-500 dark:text-slate-400'
+                  }`}>
+                    {athlete.full_name ? athlete.full_name.charAt(0).toUpperCase() : 'A'}
+                  </Text>
+                </View>
+                
+                <View className="pr-2">
+                  <Text className={`font-bold text-base ${
+                    selectedAthlete?.id === athlete.id ? 'text-primary' : 'text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {athlete.full_name || 'Sin Nombre'}
+                  </Text>
+                  <Text className="text-xs text-slate-500">Atleta</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            
+            {athletes.length === 0 && (
+              <Text className="text-slate-500 italic mt-2">No hay atletas registrados en la base de datos.</Text>
+            )}
+          </ScrollView>
+        </View>
+        {/* ------------------------------------------ */}
+
         <View className="mb-6">
           <Text className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Enfoque de la Rutina</Text>
           <TextInput
@@ -164,7 +232,6 @@ export default function RoutineCreator() {
                 onChangeText={(text) => updateExercise(index, 'name', text)}
               />
 
-              {/* AÑADIDO: Input para notas técnicas */}
               <TextInput
                 className="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg mb-3 border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white text-sm"
                 placeholder="Notas del Coach (opcional)"
@@ -194,7 +261,6 @@ export default function RoutineCreator() {
                     onChangeText={(text) => updateExercise(index, 'reps', text)}
                   />
                 </View>
-                {/* AÑADIDO: Input para RIR */}
                 <View className="flex-1">
                   <TextInput
                     className="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white text-center"

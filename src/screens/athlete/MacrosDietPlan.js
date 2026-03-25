@@ -19,22 +19,21 @@ export default function MacrosDietPlan() {
     try {
       setLoading(true);
       
-      // 1. Buscamos la dieta asignada a este atleta
+      // 1. Buscamos la dieta asignada a este atleta (la más reciente)
       const { data: dietData, error: dietError } = await supabase
         .from('diets')
         .select('*')
         .eq('athlete_id', session?.user?.id)
-        .single(); // Pedimos un único resultado (la dieta actual)
+        .order('created_at', { ascending: false }) // 👈 Ordenamos por la más nueva
+        .limit(1) // 👈 Cogemos solo 1
+        .maybeSingle(); // 👈 No entra en pánico si hay 0 o varias
 
-      if (dietError) {
-        // Si el error es PGRST116 significa que simplemente no encontró resultados (no hay dieta asignada aún)
-        if (dietError.code !== 'PGRST116') throw dietError;
-      }
+      if (dietError) throw dietError;
 
       if (dietData) {
         setDiet(dietData);
         
-        // 2. Si hay dieta, buscamos sus comidas (meals) ordenadas por el número de comida
+        // 2. Si hay dieta, buscamos sus comidas (meals) ordenadas
         const { data: mealsData, error: mealsError } = await supabase
           .from('meals')
           .select('*')

@@ -1,20 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
-import { useAuthStore } from '../../store/useAuthStore';
+// Ya no necesitamos sacar la session del Coach porque usaremos el ID del atleta seleccionado
+// import { useAuthStore } from '../../store/useAuthStore'; 
 
 export default function DietCreator() {
-  const { session } = useAuthStore();
-  
-  // 1. Estado para los totales del día
+  // --- NUEVO ESTADO PARA LOS ATLETAS ---
+  const [athletes, setAthletes] = useState([]);
+  const [selectedAthlete, setSelectedAthlete] = useState(null);
+
+  // Estados originales de la dieta
   const [phase, setPhase] = useState('');
   const [totals, setTotals] = useState({ kcal: '', protein: '', carbs: '', fats: '' });
+  const [meals, setMeals] = useState([{ target_kcal: '', target_protein: '', target_carbs: '', target_fats: '' }]);
 
-  // 2. Estado para la lista dinámica de comidas (empezamos con 1 vacía)
-  const [meals, setMeals] = useState([
-    { target_kcal: '', target_protein: '', target_carbs: '', target_fats: '' }
-  ]);
+  // Cargar los atletas al entrar a la pantalla
+  useEffect(() => {
+    fetchAthletes();
+  }, []);
+
+  const fetchAthletes = async () => {
+    try {
+      // Buscamos en la tabla 'users' a todos los que tengan el rol 'athlete'
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, avatar_url')
+        .eq('role', 'atleta');
+
+      if (error) throw error;
+      setAthletes(data || []);
+    } catch (error) {
+      console.error("Error al cargar atletas:", error.message);
+    }
+  };
 
   const addMeal = () => {
     setMeals([...meals, { target_kcal: '', target_protein: '', target_carbs: '', target_fats: '' }]);
@@ -31,17 +50,23 @@ export default function DietCreator() {
   };
 
   const handleSaveDiet = async () => {
+    // NUEVA VALIDACIÓN: Asegurarnos de que el coach ha elegido a un atleta
+    if (!selectedAthlete) {
+      Alert.alert("Falta información", "Por favor, selecciona a un atleta de la lista superior.");
+      return;
+    }
+
     if (!phase.trim()) {
       Alert.alert("Falta información", "Por favor, indica la fase o nombre de la dieta.");
       return;
     }
 
     try {
-      // A. CREAR LA DIETA (Cabecera)
+      // A. CREAR LA DIETA asignada al ID real del atleta seleccionado
       const { data: dietData, error: dietError } = await supabase
         .from('diets')
         .insert([{ 
-          athlete_id: session?.user?.id, // ID temporal para pruebas, luego será el del atleta
+          athlete_id: selectedAthlete.id, // <--- ¡AQUÍ ESTÁ LA MAGIA!
           phase: phase,
           total_kcal: parseInt(totals.kcal) || 0,
           total_proteins: parseInt(totals.protein) || 0,
@@ -53,7 +78,7 @@ export default function DietCreator() {
 
       if (dietError) throw dietError;
 
-      // B. CREAR LAS COMIDAS (Meals)
+      // B. CREAR LAS COMIDAS
       const mealsToInsert = meals.map((meal, index) => ({
         diet_id: dietData.id,
         meal_order: index + 1,
@@ -69,9 +94,10 @@ export default function DietCreator() {
 
       if (mealsError) throw mealsError;
 
-      Alert.alert("¡Menú servido!", "La dieta y sus comidas se han guardado a la perfección.");
+      Alert.alert("¡Menú asignado!", `La dieta se ha guardado y asignado correctamente a ${selectedAthlete.full_name}.`);
       
-      // Limpiar formulario
+      // Limpiar formulario completo
+      setSelectedAthlete(null);
       setPhase('');
       setTotals({ kcal: '', protein: '', carbs: '', fats: '' });
       setMeals([{ target_kcal: '', target_protein: '', target_carbs: '', target_fats: '' }]);
@@ -89,6 +115,52 @@ export default function DietCreator() {
       </View>
 
       <ScrollView className="flex-1 p-4">
+        
+        {/* --- NUEVA SECCIÓN: SELECTOR DE ATLETAS --- */}
+        <View className="mb-6">
+          <Text className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">¿Para quién es este plan?</Text>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+            {athletes.map((athlete) => (
+              <TouchableOpacity
+                key={athlete.id}
+                onPress={() => setSelectedAthlete(athlete)}
+                className={`mr-3 p-3 rounded-2xl border flex-row items-center ${
+                  selectedAthlete?.id === athlete.id
+                    ? 'bg-primary/10 border-primary'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                {/* Avatar simulado con la inicial del nombre */}
+                <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${
+                  selectedAthlete?.id === athlete.id ? 'bg-primary' : 'bg-slate-100 dark:bg-slate-700'
+                }`}>
+                  <Text className={`font-black text-lg ${
+                    selectedAthlete?.id === athlete.id ? 'text-white' : 'text-slate-500 dark:text-slate-400'
+                  }`}>
+                    {athlete.full_name ? athlete.full_name.charAt(0).toUpperCase() : 'A'}
+                  </Text>
+                </View>
+                
+                <View className="pr-2">
+                  <Text className={`font-bold text-base ${
+                    selectedAthlete?.id === athlete.id ? 'text-primary' : 'text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {athlete.full_name || 'Sin Nombre'}
+                  </Text>
+                  <Text className="text-xs text-slate-500">Atleta</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            
+            {/* Mensaje por si no hay atletas registrados */}
+            {athletes.length === 0 && (
+              <Text className="text-slate-500 italic mt-2">No hay atletas registrados en la base de datos.</Text>
+            )}
+          </ScrollView>
+        </View>
+        {/* ------------------------------------------ */}
+
         {/* SECCIÓN 1: Totales del Día */}
         <View className="bg-white dark:bg-slate-800 p-4 rounded-xl mb-6 border border-slate-200 dark:border-slate-700">
           <Text className="font-bold text-primary mb-4 text-lg">Objetivos Diarios</Text>

@@ -1,10 +1,13 @@
 import React from 'react';
+import { useAuthStore } from '../../store/useAuthStore';
 import { View, Text, ScrollView, TouchableOpacity, Image, SafeAreaView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 
+
 export default function CoachDashboard() {
 
+  const { logout } = useAuthStore();
   const {colorScheme, toggleColorScheme} = useColorScheme();
 
   const athletes = [
@@ -53,10 +56,12 @@ export default function CoachDashboard() {
             <Text className="text-xs text-slate-500 dark:text-slate-400">Welcome back, Coach Mike</Text>
           </View>
         </View>
+        
         <View className="flex-row gap-2 items-center">
           <TouchableOpacity className="p-2 rounded-full text-slate-600 dark:text-slate-300">
             <MaterialIcons name="notifications" size={24} color="#64748b" />
           </TouchableOpacity>
+          
           <TouchableOpacity 
             onPress={toggleColorScheme}
             className="p-2 rounded-full bg-slate-200 dark:bg-slate-700"
@@ -66,6 +71,14 @@ export default function CoachDashboard() {
               size={24} 
               color={colorScheme === 'dark' ? '#fbbf24' : '#64748b'} 
             />
+          </TouchableOpacity>
+
+          {/* BOTÓN DE CERRAR SESIÓN AÑADIDO AQUÍ */}
+          <TouchableOpacity 
+            onPress={logout}
+            className="p-2 rounded-full bg-rose-100 dark:bg-rose-500/20"
+          >
+            <MaterialIcons name="logout" size={24} color="#f43f5e" />
           </TouchableOpacity>
         </View>
       </View>
@@ -106,7 +119,7 @@ export default function CoachDashboard() {
           </View>
         </ScrollView>
 
-{/* My Athletes List */}
+        {/* My Athletes List */}
         <View className="mb-6">
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">My Athletes</Text>
@@ -116,7 +129,6 @@ export default function CoachDashboard() {
           </View>
 
           <View className="space-y-3">
-            {/* AQUÍ ESTABA EL ERROR: Faltaba abrir el .map() */}
             {athletes.map((athlete) => (
               <View key={athlete.id} className="flex-row items-center gap-4 bg-slate-100 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800/60 mb-3">
                 <View className="w-14 h-14 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">

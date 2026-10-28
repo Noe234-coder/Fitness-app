@@ -24,3 +24,6 @@ supabase/.temp/
 # legacy Expo app
 legacy-expo/node_modules/
 legacy-expo/.expo/
+
+# Expo leftovers from the old app
+.expo/

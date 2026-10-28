@@ -1,6 +1,7 @@
 # FitnessApp — rules for Claude Code
 
-Read `PLAN.md` first. Work on the step it marks as next; don't jump ahead.
+Read `PLAN.md` first, then `docs/session-notes.md` (how to run things, gotchas, last session's handoff).
+Work on the step PLAN.md marks as next; don't jump ahead. At the end of a session, update `docs/session-notes.md`.
 
 ## The author
 - A student who knows SQL/Postgres well and is learning the rest. Explain the *why* behind design choices

@@ -18,7 +18,7 @@ Test group: the trainer, the author, and some friends.
 ```
 PLAN.md, CLAUDE.md      this plan and the rules for Claude Code
 supabase/migrations/    the ONLY source of truth for the database
-supabase/tests/         RLS scenarios (plain SQL today; port to pgTAP in step 1)
+supabase/tests/         pgTAP tests (RLS, grants, integrity); run with `supabase test db`
 stitch/                 UI designs (Tailwind HTML + screenshots)
 web/                    the new PWA (created in step 1)
 legacy-expo/            old app, old docs, old migrations — read only
@@ -56,7 +56,8 @@ Sheet-to-table mapping:
      Tailwind theme (colours, fonts) taken from the Stitch HTML.
    - `supabase init` (keep existing `migrations/`), `supabase link --project-ref kgsteocdauztgpnasdki`,
      `supabase migration list` must show local = remote. `supabase gen types typescript` -> `web/src/types/db.ts`.
-   - Port `supabase/tests/rls_scenarios.sql` to pgTAP; run with `supabase test db` against the local stack.
+   - Port the RLS scenarios to pgTAP (`supabase/tests/database/rls.test.sql`); run with `supabase test db`
+     against the local stack.
    - Login screen only (email + password, Spanish/English), route guard by role. No sign-up screen: accounts
      come from invites. First coach: Dashboard -> Auth -> Add user, then in the SQL editor
      `update public.profiles set role = 'coach' where id = '<user id>';`

@@ -9,9 +9,10 @@ Test group: the trainer, the author, and some friends.
 - **Supabase project `FitnessApp`** (ref `kgsteocdauztgpnasdki`, region eu-west-3 Paris) is live and empty.
   The 3 migrations in `supabase/migrations/` are applied. Security advisors: no findings.
   The repo is linked (`supabase link`); `supabase migration list --linked` shows local = remote.
-- **`web/`** (step 1, slices 1-4 done): Vite + React + TS + Tailwind theme from Stitch, es/en i18n, PWA shell,
+- **`web/`** (step 1 done, 2026-10-28): Vite + React + TS + Tailwind theme from Stitch, es/en i18n, PWA shell,
   email/password login with routing by role (`/athlete`, `/coach`). Types in `web/src/types/db.ts`
-  (`npm run types:db`, generated from the local stack). Next: first Vercel preview deploy.
+  (`npm run types:db`, generated from the local stack). Tested on a phone via the Vercel preview: login, role
+  routing, reload on `/coach`, add to home screen. **Next: step 1b (invite flow).**
 - **Auth settings (dashboard, 2026-10-28):** public sign-ups OFF (accounts come from the dashboard now, from
   invites in step 1b). Site URL `https://fitness-app-git-rebuild-man-d650.vercel.app`; redirect URLs
   `https://fitness-app-git-rebuild-man-d650.vercel.app/**` and `http://localhost:5173/**`. Switch the Site URL
@@ -63,7 +64,7 @@ Sheet-to-table mapping:
 - MEDIA / VARIACION rows -> view `weekly_checkin_stats` (variation = compare with previous week in the UI)
 
 ## Build order (~2 h/week)
-1. **Foundation (2-3 sessions)**
+1. **Foundation (2-3 sessions)** — DONE 2026-10-28
    - Scaffold `web/` (Vite + React + TS + Tailwind + TanStack Query + react-i18next + vite-plugin-pwa).
      Tailwind theme (colours, fonts) taken from the Stitch HTML.
    - `supabase init` (keep existing `migrations/`), `supabase link --project-ref kgsteocdauztgpnasdki`,
@@ -75,7 +76,7 @@ Sheet-to-table mapping:
      `update public.profiles set role = 'coach' where id = '<user id>';`
    - Deploy preview on Vercel so phones can test it. Needs an SPA rewrite in `web/vercel.json` (reloading
      `/coach` must not 404) and the Vercel URL as Auth Site URL / redirect URL in the Supabase dashboard.
-1b. **Invite flow:** Edge Function (service_role key server-side only) that invites an email and creates the
+1b. **Invite flow (NEXT):** Edge Function (service_role key server-side only) that invites an email and creates the
    coach assignment. Then turn off public sign-ups in the dashboard.
 2. **Athlete workout logging (3-4 sessions):** view plan, log sets offline, show previous session's numbers
    next to each set. `supabase/seed.sql` with one sample plan typed in from the trainer's "Torso" day.

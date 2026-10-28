@@ -3,12 +3,41 @@
     "name": "FitnessApp",
     "tagline": "Your training, your diet and your progress in one place."
   },
+  "common": {
+    "loading": "Loading…",
+    "retry": "Try again",
+    "signOut": "Sign out",
+    "profileError": "We couldn't load your profile. Check your connection."
+  },
   "language": {
     "label": "Language",
     "es": "Español",
     "en": "English"
   },
-  "placeholder": {
-    "action": "Get started"
+  "login": {
+    "title": "Sign in",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "errors": {
+      "invalidCredentials": "Wrong email or password.",
+      "emailNotConfirmed": "Confirm your email before signing in. Check your inbox.",
+      "rateLimited": "Too many attempts. Wait a moment and try again.",
+      "network": "No connection. Check your signal and try again.",
+      "unknown": "Something went wrong. Try again in a moment."
+    }
+  },
+  "area": {
+    "greeting": "Hi",
+    "greetingName": "Hi, {{name}}",
+    "athlete": {
+      "title": "Athlete",
+      "body": "Today's workout will show up here. Coming soon."
+    },
+    "coach": {
+      "title": "Coach",
+      "body": "Your athletes and their plans will show up here. Coming soon."
+    }
   }
 }

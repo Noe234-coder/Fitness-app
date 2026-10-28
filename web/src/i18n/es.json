@@ -1,0 +1,14 @@
+{
+  "app": {
+    "name": "FitnessApp",
+    "tagline": "Tu entrenamiento, tu dieta y tu progreso en un solo sitio."
+  },
+  "language": {
+    "label": "Idioma",
+    "es": "Español",
+    "en": "English"
+  },
+  "placeholder": {
+    "action": "Empezar"
+  }
+}

@@ -1,0 +1,26 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+
+/* Stitch toggles dark mode with a `dark` class on <html>, not the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Theme taken from stitch/dashboard_de_entrenamiento_atleta/code.html (all 11 designs share it;
+ * accent-green comes from plan_de_dieta_macros). Spacing, radius and the slate greys are Tailwind's
+ * defaults, exactly as in Stitch, so Stitch classes can be pasted unchanged.
+ */
+@theme {
+  --color-primary: #007fff;
+  --color-background-light: #f5f7f8;
+  --color-background-dark: #0f1923;
+  --color-accent-green: #10b981;
+
+  --font-display: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-background-light font-display text-slate-900 antialiased dark:bg-background-dark dark:text-slate-100;
+  }
+}

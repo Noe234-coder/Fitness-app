@@ -57,11 +57,13 @@ Sheet-to-table mapping:
    - `supabase init` (keep existing `migrations/`), `supabase link --project-ref kgsteocdauztgpnasdki`,
      `supabase migration list` must show local = remote. `supabase gen types typescript` -> `web/src/types/db.ts`.
    - Port `supabase/tests/rls_scenarios.sql` to pgTAP; run with `supabase test db` against the local stack.
-   - Auth screens (email + password, Spanish/English), route guard by role.
-   - Invite flow: Edge Function (service_role key server-side only) that invites an email and creates the
-     coach assignment. First coach: sign up, then in the SQL editor
+   - Login screen only (email + password, Spanish/English), route guard by role. No sign-up screen: accounts
+     come from invites. First coach: Dashboard -> Auth -> Add user, then in the SQL editor
      `update public.profiles set role = 'coach' where id = '<user id>';`
-   - Deploy preview on Vercel so phones can test it.
+   - Deploy preview on Vercel so phones can test it. Needs an SPA rewrite in `web/vercel.json` (reloading
+     `/coach` must not 404) and the Vercel URL as Auth Site URL / redirect URL in the Supabase dashboard.
+1b. **Invite flow:** Edge Function (service_role key server-side only) that invites an email and creates the
+   coach assignment. Then turn off public sign-ups in the dashboard.
 2. **Athlete workout logging (3-4 sessions):** view plan, log sets offline, show previous session's numbers
    next to each set. `supabase/seed.sql` with one sample plan typed in from the trainer's "Torso" day.
    -> first test with friends.
@@ -80,6 +82,9 @@ Sheet-to-table mapping:
 - Weekly form scores (compliance, hunger, energy, digestion) assumed 1-10; confirm with the trainer.
 - GDPR: health-related data of other people. Needs consent text, export and delete-account, privacy page
   before real athletes use it.
+- Deleting a coach account: today it is blocked once the coach has written plans (`mesocycles.coach_id`,
+  `diets.coach_id` and `exercise_library` references use NO ACTION). Needs its own design (e.g. hand plans and
+  library over to another coach, or anonymise the coach) before delete-account ships.
 
 ## Definition of done for each step
 Migrations applied cleanly, RLS tests green, `supabase gen types` committed, works on a phone-sized screen,

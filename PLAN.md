@@ -12,6 +12,12 @@ Test group: the trainer, the author, and some friends.
 - **`web/`** (step 1, slices 1-4 done): Vite + React + TS + Tailwind theme from Stitch, es/en i18n, PWA shell,
   email/password login with routing by role (`/athlete`, `/coach`). Types in `web/src/types/db.ts`
   (`npm run types:db`, generated from the local stack). Next: first Vercel preview deploy.
+- **Auth settings (dashboard, 2026-10-28):** public sign-ups OFF (accounts come from the dashboard now, from
+  invites in step 1b). Site URL `https://fitness-app-git-rebuild-man-d650.vercel.app`; redirect URLs
+  `https://fitness-app-git-rebuild-man-d650.vercel.app/**` and `http://localhost:5173/**`. Switch the Site URL
+  to the production URL when `rebuild` is merged. Accounts: one coach (the author), one test athlete.
+- **Vercel:** previews deploy from `rebuild` and are behind Vercel Authentication (Deployment Protection),
+  so only people logged into the Vercel team can open them.
 - **Local development:** Supabase CLI pinned in `mise.toml`. `supabase start` runs the local stack;
   `supabase test db` runs the pgTAP tests (57 passing).
 - **Old Supabase project** (ref `tqdzqynijzhcurzihhsl`) is **paused**. Its RLS let any user make themselves

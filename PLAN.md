@@ -8,6 +8,12 @@ Test group: the trainer, the author, and some friends.
 ## Current state (2026-10-28)
 - **Supabase project `FitnessApp`** (ref `kgsteocdauztgpnasdki`, region eu-west-3 Paris) is live and empty.
   The 3 migrations in `supabase/migrations/` are applied. Security advisors: no findings.
+  The repo is linked (`supabase link`); `supabase migration list --linked` shows local = remote.
+- **`web/`** (step 1, slices 1-4 done): Vite + React + TS + Tailwind theme from Stitch, es/en i18n, PWA shell,
+  email/password login with routing by role (`/athlete`, `/coach`). Types in `web/src/types/db.ts`
+  (`npm run types:db`, generated from the local stack). Next: first Vercel preview deploy.
+- **Local development:** Supabase CLI pinned in `mise.toml`. `supabase start` runs the local stack;
+  `supabase test db` runs the pgTAP tests (57 passing).
 - **Old Supabase project** (ref `tqdzqynijzhcurzihhsl`) is **paused**. Its RLS let any user make themselves
   admin. It is reference only; never point new code at it.
 - **Old Expo / React Native app** moved to `legacy-expo/` as reference. It is not built or maintained.

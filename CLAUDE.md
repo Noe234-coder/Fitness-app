@@ -11,6 +11,9 @@ Read `PLAN.md` first. Work on the step it marks as next; don't jump ahead.
 - `legacy-expo/` is the old React Native app: read it for ideas, never edit it, never import from it.
 - `stitch/<screen>/code.html` + `screen.png` are the UI designs. Reuse their Tailwind classes, colours and layout.
 - The new app lives in `web/`.
+- Node: the author runs Node 26 locally, but Vercel builds with Node 24. Keep `web/` compatible with Node 22+
+  (set `"engines": {"node": ">=22"}` in `web/package.json`).
+- Hosting: Vercel project `fitness-app` (root directory `web/`). Build env vars are set in Vercel, never committed.
 
 ## Database
 - Supabase project ref: `kgsteocdauztgpnasdki` (eu-west-3). Never use the old project `tqdzqynijzhcurzihhsl`.

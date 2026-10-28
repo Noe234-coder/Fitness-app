@@ -61,7 +61,7 @@ Sheet-to-table mapping:
    - Invite flow: Edge Function (service_role key server-side only) that invites an email and creates the
      coach assignment. First coach: sign up, then in the SQL editor
      `update public.profiles set role = 'coach' where id = '<user id>';`
-   - Deploy preview (Vercel / Netlify / Cloudflare Pages) so phones can test it.
+   - Deploy preview on Vercel so phones can test it.
 2. **Athlete workout logging (3-4 sessions):** view plan, log sets offline, show previous session's numbers
    next to each set. `supabase/seed.sql` with one sample plan typed in from the trainer's "Torso" day.
    -> first test with friends.
@@ -70,10 +70,16 @@ Sheet-to-table mapping:
 5. **Coach panel:** plan editor, "clone plan to another athlete", "who has not logged this week".
    This is how the trainer enters real plans, replacing the sheets.
 
-## Open questions / assumptions to confirm
-- Stress scale assumed 1-10 (check constraint in schema). Weekly form scores assumed 1-10.
-- Hosting provider for the PWA.
-- GDPR: health-related data of other people. Needs consent text, export and delete-account, privacy page.
+## Confirmed (2026-10-28)
+- Stress scale is 1-10 (matches the check constraint).
+- The first coach account is the author's own; the trainer is invited later.
+- Hosting: Vercel (account to be created; project root directory `web/`, env vars set in Vercel, auto-deploy on push).
+- The repo stays public (no secret keys in it).
+
+## Open questions
+- Weekly form scores (compliance, hunger, energy, digestion) assumed 1-10; confirm with the trainer.
+- GDPR: health-related data of other people. Needs consent text, export and delete-account, privacy page
+  before real athletes use it.
 
 ## Definition of done for each step
 Migrations applied cleanly, RLS tests green, `supabase gen types` committed, works on a phone-sized screen,
